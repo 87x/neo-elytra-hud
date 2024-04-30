@@ -143,6 +143,10 @@ public class ElytraFlightHud implements ClientModInitializer {
 
     private float hud_alpha = 0.0f;
 
+    private float air_speed_old = 0;
+
+    private float acceleration = 0;
+
     private void onHudRender(DrawContext drawContext, float tickDelta) {
         TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
         MinecraftClient client = MinecraftClient.getInstance();
@@ -158,6 +162,7 @@ public class ElytraFlightHud implements ClientModInitializer {
         int screenLesser = Math.min(screenWidth, screenHeight);
         int screenCenterX = screenWidth / 2;
         int screenCenterY = screenHeight / 2;
+        int maincolor = 0x00FF00; // remember that this should also be usable at night at some point. affects only text
 
         GameRenderer gameRenderer = MinecraftClient.getInstance().gameRenderer;
         Camera camera = gameRenderer.getCamera();
@@ -170,7 +175,10 @@ public class ElytraFlightHud implements ClientModInitializer {
         double screen_lower_pitch_deg = camera_pitch_deg + fov_deg / 2.0D;
         double screen_upper_pitch_deg = camera_pitch_deg - fov_deg / 2.0D;
 
-        float horizon_width = screenWidth / 8f;
+        float horizon_width = screenLesser / 6f;
+        float ladder_width = screenLesser / 16f; // no longer the width overall(!)
+        float ladder_text = ladder_width + screenLesser / 65f;
+        float horizon_gap = screenLesser / 65f;
         float horizon_vertical_blip_length = screenHeight / 160f;
         float center_height = screenCenterY + (float) (Math.tan(-camera_pitch) / fov_tan) * pixels_half;
 
@@ -195,6 +203,12 @@ public class ElytraFlightHud implements ClientModInitializer {
                 double rightSpeedAngle = sidewaysSpeed / forwardSpeed;
                 float flight_vector_x = screenCenterX + (float) (rightSpeedAngle / fov_tan) * pixels_half;
                 float flight_vector_y = screenCenterY - (float) (upwardSpeedAngle / fov_tan) * pixels_half;
+                float drift;
+                if (Math.abs(screenCenterY - flight_vector_y) < 0.8f * pixels_half) {
+                    drift = (float) (rightSpeedAngle / fov_tan) * pixels_half;
+                } else {
+                    drift = 0;
+                }
 
                 int radar_height = 0;
                 BlockPos player_blockpos = player.getBlockPos();
@@ -242,10 +256,10 @@ public class ElytraFlightHud implements ClientModInitializer {
                     float height = screenCenterY + diff_pixels;
                     if (height > screenHeight * 0.85f || height < screenHeight * 0.15f) continue;
 
-                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width / 2f, height, screenCenterX - horizon_width / 2f + horizon_width / 3, height).color(0f, 1f, 0f, hud_alpha));
-                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width / 2f, height, screenCenterX - horizon_width / 2f, height + horizon_vertical_blip_length).color(0f, 1f, 0f, hud_alpha));
-                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width / 2f + 2 * horizon_width / 3f, height, screenCenterX - horizon_width / 2f + horizon_width, height).color(0f, 1f, 0f, hud_alpha));
-                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width / 2f + horizon_width, height, screenCenterX - horizon_width / 2f + horizon_width, height + horizon_vertical_blip_length).color(0f, 1f, 0f, hud_alpha));
+                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_gap - ladder_width + drift, height, screenCenterX - horizon_gap + drift, height).color(0f, 1f, 0f, hud_alpha));
+                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_gap - ladder_width + drift, height, screenCenterX - horizon_gap - ladder_width + drift, height + horizon_vertical_blip_length).color(0f, 1f, 0f, hud_alpha));
+                    drawLine.accept(DrawLineArguments.make(screenCenterX + horizon_gap + ladder_width + drift, height, screenCenterX + horizon_gap + drift, height).color(0f, 1f, 0f, hud_alpha));
+                    drawLine.accept(DrawLineArguments.make(screenCenterX + horizon_gap + ladder_width + drift, height, screenCenterX + horizon_gap + ladder_width + drift, height + horizon_vertical_blip_length).color(0f, 1f, 0f, hud_alpha));
                 }
 
                 // draw lines on the horizon DOWNWARDS. (+degrees in minecraft)
@@ -258,26 +272,25 @@ public class ElytraFlightHud implements ClientModInitializer {
                     if (height > screenHeight * 0.85f || height < screenHeight * 0.15f) continue;
 
 
-
                     // left horizontal lines
-                    float leftx = screenCenterX - horizon_width / 2f;
-                    float part_width = horizon_width / 3f / 3f;
+                    float leftx = screenCenterX - horizon_gap - ladder_width + drift;
+                    float part_width = ladder_width / 3f;
                     drawLine.accept(DrawLineArguments.make(leftx, height, leftx + part_width - part_width / 3, height).color(0f, 1f, 0f, hud_alpha));
                     drawLine.accept(DrawLineArguments.make(leftx + part_width, height, leftx + 2 * part_width - part_width / 3, height).color(0f, 1f, 0f, hud_alpha));
                     drawLine.accept(DrawLineArguments.make(leftx + 2 * part_width, height, leftx + 3 * part_width, height).color(0f, 1f, 0f, hud_alpha));
                     // right horizontal lines
-                    float rightx = screenCenterX + horizon_width / 2f;
+                    float rightx = screenCenterX + horizon_gap + ladder_width + drift;
                     drawLine.accept(DrawLineArguments.make(rightx, height, rightx - part_width + part_width / 3, height).color(0f, 1f, 0f, hud_alpha));
                     drawLine.accept(DrawLineArguments.make(rightx - part_width, height, rightx - 2 * part_width + part_width / 3, height).color(0f, 1f, 0f, hud_alpha));
                     drawLine.accept(DrawLineArguments.make(rightx - 2 * part_width, height, rightx - 3 * part_width, height).color(0f, 1f, 0f, hud_alpha));
                     // vertical ends
-                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width / 2f, height, screenCenterX - horizon_width / 2f, height - horizon_vertical_blip_length).color(0f, 1f, 0f, hud_alpha));
-                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width / 2f + horizon_width, height, screenCenterX - horizon_width / 2f + horizon_width, height - horizon_vertical_blip_length).color(0f, 1f, 0f, hud_alpha));
+                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_gap - ladder_width + drift, height, screenCenterX - horizon_gap - ladder_width + drift, height - horizon_vertical_blip_length).color(0f, 1f, 0f, hud_alpha));
+                    drawLine.accept(DrawLineArguments.make(screenCenterX + horizon_gap + ladder_width + drift, height, screenCenterX + horizon_gap + ladder_width + drift, height - horizon_vertical_blip_length).color(0f, 1f, 0f, hud_alpha));
                 }
 
                 if (!(center_height > screenHeight * 0.85f || center_height < screenHeight * 0.15f)) {
-                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width / 2f, center_height, screenCenterX - horizon_width / 2f + horizon_width / 3, center_height).color(0f, 1f, 0f, hud_alpha));
-                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width / 2f + 2 * horizon_width / 3f, center_height, screenCenterX + horizon_width / 2f, center_height).color(0f, 1f, 0f, hud_alpha));
+                    drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_gap + drift, center_height, screenCenterX - horizon_gap - horizon_width + drift, center_height).color(0f, 1f, 0f, hud_alpha));
+                    drawLine.accept(DrawLineArguments.make(screenCenterX + horizon_gap + drift, center_height, screenCenterX + horizon_gap + horizon_width + drift, center_height).color(0f, 1f, 0f, hud_alpha));
                 }
 
                 // float flight_vector_size = screenLesser / 100f;
@@ -325,8 +338,8 @@ public class ElytraFlightHud implements ClientModInitializer {
                 if ((Math.abs(screenCenterY - flight_vector_y) > 0.8f * pixels_half) | (Math.abs(screenCenterX - flight_vector_x) > 0.8f * pixels_half)) {
                     drawLine.accept(DrawLineArguments.make(screenCenterX, screenCenterY, flight_vector_x, flight_vector_y).color(0f, 1f, 0f, hud_alpha));
                 }
-                // drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width/2f, (float) screenCenterY, screenCenterX - horizon_width/2f + horizon_width/3, (float) screenCenterY).color(0f, 1f, 0f, 1f));
-                // drawLine.accept(DrawLineArguments.make(screenCenterX - horizon_width/2f + 2*horizon_width/3f, (float) screenCenterY, screenCenterX - horizon_width/2f + horizon_width, (float) screenCenterY).color(0f, 1f, 0f, 1f));
+                // drawLine.accept(DrawLineArguments.make(screenCenterX - ladder_width/2f, (float) screenCenterY, screenCenterX - ladder_width/2f + ladder_width/3, (float) screenCenterY).color(0f, 1f, 0f, 1f));
+                // drawLine.accept(DrawLineArguments.make(screenCenterX - ladder_width/2f + 2*ladder_width/3f, (float) screenCenterY, screenCenterX - ladder_width/2f + ladder_width, (float) screenCenterY).color(0f, 1f, 0f, 1f));
 
                 // bufferBuilder.vertex(matrix4f, screenCenterX - screenWidth/4.0f, screenCenterY - screenHeight/4.0f, -90.0f).color(0, 255, 0, 255).normal(matrix3f, 1.0F, 1.0F, 0.0F).next();
                 // bufferBuilder.vertex(matrix4f, screenCenterX + screenWidth/4.0f, screenCenterY - screenHeight/4.0f, -90.0f).color(0, 255, 0, 255).normal(matrix3f, 1.0F, 1.0F, 0.0F).next();
@@ -335,18 +348,17 @@ public class ElytraFlightHud implements ClientModInitializer {
 
                 // Compass
 
-                float heading = camera.getYaw();
-                float compass_width = 0.85f * horizon_width;
-                int heading_tens = Math.round(heading / 10f);
-                float heading_fives = Math.round((heading * 2f) / 10f) / 2f;
+                float heading = realMod(camera.getYaw(), 360);
+                float compass_width = ladder_width * 2 + horizon_gap * 2;
                 float compass_blip_height = screenHeight / 200f;
 
-                for (float heading_blip = heading_fives - 3f * 0.5f; heading_blip <= heading / 10f + 3 * 0.5f; heading_blip += 0.5f) {
+                for (int i = 360; i > 0; i -= 5) {
                     // Skip first blip if it's outside.
-                    if (heading_blip < heading / 10f - 3 * 0.5f) continue;
-                    float heading_offset = heading - (heading_blip * 10f);
-                    float heading_x = screenCenterX - (heading_offset / 15f) * compass_width / 2f;
+                    float heading_offset = (realMod(i - heading + 360,360) - 180);
+                    if (Math.abs(heading_offset) > 15) continue;
+                    float heading_x = screenCenterX + (heading_offset / 15f) * compass_width / 2f;
                     float font_height = textRenderer.fontHeight;
+                    String text = String.format("%02.0f", (float) i/10); // i'm too stupid; there should not be float here?
                     drawLine.accept(DrawLineArguments.make(heading_x, screenCenterY + screenHeight / 4f + font_height * 1.05f, heading_x, screenCenterY + screenHeight / 4f + font_height * 1.05f + compass_blip_height).color(0f, 1f, 0f, hud_alpha));
                 }
 
@@ -370,10 +382,11 @@ public class ElytraFlightHud implements ClientModInitializer {
                 RenderSystem.lineWidth(1.0F);
 
                 Vec3d player_velocity_vector = new Vec3d(player.getVelocity().x, player.getVelocity().y - GRAVITY, player.getVelocity().z);
-                int air_speed = Math.round((float) player_velocity_vector.length() * 100f);
+                float air_speed = (float) (player_velocity_vector.length()) * 20f * 3.6f;
+                acceleration = acceleration * 0.96f + 0.04f * (air_speed - air_speed_old) * 20f;
 
                 if (hud_alpha > 0.66) {
-                    for (int i = -90; i < 90; i += 10) {
+                    for (int i = -80; i <= 80; i += 10) {
                         if (i == 0) continue;
                         // Out of upper screen bound. next!
                         // if (i < screen_upper_pitch_deg) continue;
@@ -383,13 +396,21 @@ public class ElytraFlightHud implements ClientModInitializer {
                         float height = screenCenterY + diff_pixels - (i > 0 ? (0.9f * textRenderer.fontHeight) : (textRenderer.fontHeight * (0.15f)));
                         if (height > screenHeight * 0.85f || height < screenHeight * 0.15f) continue;
                         String text = "" + Math.abs(i);
-                        drawContext.drawText(textRenderer, text, (int) (screenCenterX + horizon_width / 2), (int) height, 0x00FF00, false);
-                        drawContext.drawText(textRenderer, text, (int) (screenCenterX - horizon_width / 2f - textRenderer.getWidth(text) - screenWidth / 500f), (int) height, 0x00FF00, false);
+                        drawContext.drawText(textRenderer, text, (int) (screenCenterX + ladder_text + drift), (int) height, maincolor, false);
+                        drawContext.drawText(textRenderer, text, (int) (screenCenterX - ladder_text - textRenderer.getWidth(text) - screenWidth / 500f + drift), (int) height, maincolor, false);
+                    }
+                    for (int i = 360; i > 0; i -= 10) {
+                        // Skip first blip if it's outside.
+                        float heading_offset = (realMod(i - heading + 360,360) - 180);
+                        if (Math.abs(heading_offset) > 15) continue;
+                        float heading_x = screenCenterX + (heading_offset / 15f) * compass_width / 2f;
+                        String text = String.format("%02.0f", (float) i/10); // i'm too stupid; there should not be float here?
+                        drawContext.drawText(textRenderer, text, (int) (heading_x - textRenderer.getWidth(text) / 2), (int) (screenCenterY + screenHeight / 4f), maincolor, false);
                     }
 
-                    drawContext.drawText(textRenderer, "" + ((int) Math.floor(player_pos.y)), (int) (screenCenterX + horizon_width * 0.8f), screenCenterY, 0x00FF00, false);
-                    // textRenderer.draw(stack, "" + (Math.round((float) player_velocity_vector.y * 10f)), screenCenterX + horizon_width * 0.8f, (float) screenCenterY + textRenderer.fontHeight * 1.5f, 0x00FF00);
-                    int fall_distance_color = 0x00FF00;
+                    drawContext.drawText(textRenderer, "" + ((int) Math.floor(player_pos.y)), (int) (screenCenterX + horizon_width * 1.2f), screenCenterY, maincolor, false);
+                    // textRenderer.draw(stack, "" + (Math.round((float) player_velocity_vector.y * 10f)), screenCenterX + ladder_width * 0.8f, (float) screenCenterY + textRenderer.fontHeight * 1.5f, maincolor);
+                    int fall_distance_color = maincolor;
                     if (player.fallDistance > player.getSafeFallDistance() * 2f) {
                         fall_distance_color = 0xFF0000;
                     } else if (player.fallDistance > player.getSafeFallDistance()) {
@@ -397,40 +418,30 @@ public class ElytraFlightHud implements ClientModInitializer {
                     } else if (player.fallDistance > player.getSafeFallDistance() * 0.75f) {
                         fall_distance_color = 0xFFFF00;
                     }
-                    drawContext.drawText(textRenderer, "" + (Math.round((float) player_velocity_vector.y * 10f)), (int) (screenCenterX + horizon_width * 0.8f), (int) ((float) screenCenterY + textRenderer.fontHeight * 1.5f), fall_distance_color, false);
-                    drawContext.drawText(textRenderer, radar_height + "R", (int) (screenCenterX + horizon_width * 0.75f), screenCenterY + screenHeight / 8, 0x00FF00, false);
+                    // vertical speed is shown in m/s while airspeed is in km/h
+                    drawContext.drawText(textRenderer, "" + (String.format("%+.1f",(float) player.getVelocity().getY() * 20f)), (int) (screenCenterX + horizon_width * 1.2f), (int) ((float) screenCenterY + textRenderer.fontHeight * 1.5f), fall_distance_color, false);
+                    drawContext.drawText(textRenderer, radar_height + "R", (int) (screenCenterX + horizon_width * 1.2f), screenCenterY + screenHeight / 8, maincolor, false);
 
                     // if (air_speed < 0.01) air_speed = 0;
 
-                    int air_speed_color = 0x00FF00;
+                    int air_speed_color = maincolor;
                     double collisionDamage = collisionDamageHorizontal(player);
-                    if (collisionDamage > 5) {
-                        air_speed_color = 0x88FF00;
-                    } else if (collisionDamage > 0) {
-                        air_speed_color = 0x44FF00;
+                    if (collisionDamage > 15) {
+                        air_speed_color = 0xFF0000;
+                    } else if (collisionDamage > 5) {
+                        air_speed_color = 0xFFFF00;
                     }
-                    drawContext.drawText(textRenderer, "" + air_speed, (int) (screenCenterX - horizon_width * 0.75f - textRenderer.getWidth("" + air_speed)), screenCenterY, air_speed_color, false);
+                    drawContext.drawText(textRenderer, "" + String.format("%3.0f",air_speed), (int) (screenCenterX - horizon_width * 1.5), screenCenterY, air_speed_color, false); // km/h
+                    drawContext.drawText(textRenderer, "" + String.format("%+3.0f",acceleration), (int) (screenCenterX - horizon_width * 1.5), screenCenterY + (int) ((float) textRenderer.fontHeight * 1.5f), air_speed_color, false); // km/h/s
 
-                    for (float heading_blip = heading_fives - 3f * 0.5f; heading_blip <= heading / 10f + 3 * 0.5f; heading_blip += 0.5f) {
-                        // Skip first blip if it's outside.
-                        if (heading_blip < heading / 10f - 3 * 0.5f) continue;
-                        if (Math.floor(heading_blip) == heading_blip) {
-                            float heading_blip_360 = heading_blip < 0 ? (36 - realMod(heading_blip, 36)) : (heading_blip % 36);
-                            if (heading_blip_360 == 36) heading_blip_360 = 0;
-                            String heading_text = ((Math.floor(heading_blip_360) < 10) ? "0" : "") + (int) Math.floor(heading_blip_360);
-                            float heading_offset = heading - (heading_blip * 10f);
-                            float heading_x = screenCenterX - (heading_offset / 15f) * compass_width / 2f;
-                            drawContext.drawText(textRenderer, heading_text, (int) (heading_x - textRenderer.getWidth(heading_text) / 2f), screenCenterY + screenHeight / 4, 0x00FF00, false);
-                        }
-                    }
+                    air_speed_old = air_speed;
+
+                    GlStateManager._enableCull();
+                    GlStateManager._depthMask(true);
                 }
-
-                GlStateManager._enableCull();
-                GlStateManager._depthMask(true);
             }
         }
     }
-
     private float realMod(float a, float b) {
         float result = a % b;
         return result < 0 ? result + b : result;
