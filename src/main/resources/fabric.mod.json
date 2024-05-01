@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "elytra-flight-hud",
+  "id": "neo-elytra-flight-hud",
   "version": "${version}",
 
-  "name": "Elytra Flight Hud",
-  "description": "Adds a jet-like flight hud when using the elytra.",
+  "name": "Neo Elytra Flight Hud",
+  "description": "Fork of DeltaTimo's Elytra Flight HUD mod.",
   "authors": [
-    "Timo Zuccarello"
+    "Lassi"
   ],
   "contact": {
-    "homepage": "https://deltatimo.eu/",
-    "sources": "https://github.com/DeltaTimo/elytra-flight-hud"
+    "homepage": "https://lumihanki.net/",
+    "sources": "https://github.com/87x/neo-elytra-hud"
   },
 
   "license": "CC0-1.0",
