@@ -7,7 +7,8 @@
 Download the .jar-file from the desired release page (on the right side on GitHub) and drop it into your Minecraft mods directory. (This can usually be found in ~/.minecraft/mods/ or on Windows %AppData%\\.minecraft\\mods\\)
 
 ## See also
-[CurseForge Mod Page](https://www.curseforge.com/minecraft/mc-mods/elytra-flight-hud/)
+[Modrinth](https://modrinth.com/mod/neo-elytra-hud)
+[Upstream CurseForge Mod Page](https://www.curseforge.com/minecraft/mc-mods/elytra-flight-hud/)
 
 ## Contribution
 
