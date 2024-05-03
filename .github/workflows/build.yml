@@ -4,7 +4,6 @@
 # against bad commits.
 
 name: build
-runs-on: self-hosted
 on: [pull_request, push]
 
 jobs:
