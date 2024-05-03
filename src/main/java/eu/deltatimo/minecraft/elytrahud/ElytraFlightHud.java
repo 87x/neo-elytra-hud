@@ -120,6 +120,7 @@ public class ElytraFlightHud implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+
         // This code runs as soon as Minecraft is in a mod-load-ready state.
         // However, some things (like resources) may still be uninitialized.
         // Proceed with mild caution.
@@ -152,11 +153,7 @@ public class ElytraFlightHud implements ClientModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         Window window = client.getWindow();
         double aspect = (double) window.getWidth() / (double) window.getHeight();
-        double fov_deg = client.options.getFov().getValue();
-        double fov = Math.toRadians(fov_deg);
-        double fov_tan = Math.tan(fov / 2);
-        double hor_fov = 2.0 * Math.atan(Math.tan(fov / 2.0) * aspect);
-        double hor_fov_deg = Math.toDegrees(hor_fov);
+
         int screenWidth = window.getScaledWidth();
         int screenHeight = window.getScaledHeight();
         int screenLesser = Math.min(screenWidth, screenHeight);
@@ -168,12 +165,14 @@ public class ElytraFlightHud implements ClientModInitializer {
         Camera camera = gameRenderer.getCamera();
         double camera_pitch_deg = camera.getPitch();
         double camera_pitch = Math.toRadians(camera_pitch_deg);
-        float pixels_per_deg = (float) (screenHeight / fov_deg);
-        float pixels_per_hor_deg = (float) (screenHeight / hor_fov_deg);
-        float pixels_half = (float) screenHeight / 2;
 
-        double screen_lower_pitch_deg = camera_pitch_deg + fov_deg / 2.0D;
-        double screen_upper_pitch_deg = camera_pitch_deg - fov_deg / 2.0D;
+        assert client.player != null;
+        double fov_mult = client.player.getFovMultiplier();
+        double fov_deg = client.options.getFov().getValue() * fov_mult;
+        double fov = Math.toRadians(fov_deg);
+        double fov_tan = Math.tan(fov / 2);
+
+        float pixels_half = (float) screenHeight / 2;
 
         float horizon_width = screenLesser / 6f;
         float ladder_width = screenLesser / 16f; // no longer the width overall(!)
